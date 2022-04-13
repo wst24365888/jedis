@@ -100,6 +100,41 @@ public class PipeliningTest extends JedisCommandsTestBase {
   }
 
   @Test
+  public void pipelineDelKey() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key", "foo");
+    Response<String> getResp1 = p.get("key");
+    p.del("key");
+    Response<String> getResp2 = p.get("key");
+
+    p.sync();
+
+    assertEquals(getResp1.get(), "foo");
+    assertNull(getResp2.get());
+  }
+
+  @Test
+  public void pipelineDelMultipleKey() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key1", "foo1");
+    p.set("key2", "foo2");
+    Response<String> getResp1 = p.get("key1");
+    Response<String> getResp2 = p.get("key2");
+    p.del("key1", "key2");
+    Response<String> getResp3 = p.get("key1");
+    Response<String> getResp4 = p.get("key2");
+
+    p.sync();
+
+    assertEquals(getResp1.get(), "foo1");
+    assertEquals(getResp2.get(), "foo2");
+    assertNull(getResp3.get());
+    assertNull(getResp4.get());
+  }
+
+  @Test
   public void pipelineBinarySafeHashCommands() {
     jedis.hset("key".getBytes(), "f1".getBytes(), "v111".getBytes());
     jedis.hset("key".getBytes(), "f22".getBytes(), "v2222".getBytes());
