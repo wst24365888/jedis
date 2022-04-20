@@ -89,6 +89,96 @@ public class PipeliningTest extends JedisCommandsTestBase {
   }
 
   @Test
+  public void pipelineUnlinkKey() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key", "foo");
+    Response<String> getResp1 = p.get("key");
+    p.unlink("key");
+    Response<String> getResp2 = p.get("key");
+
+    p.sync();
+
+    assertEquals(getResp1.get(), "foo");
+    assertNull(getResp2.get());
+  }
+
+  @Test
+  public void pipelineUnlinkMultipleKey() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key1", "foo1");
+    p.set("key2", "foo2");
+    Response<String> getResp1 = p.get("key1");
+    Response<String> getResp2 = p.get("key2");
+    p.unlink("key1", "key2");
+    Response<String> getResp3 = p.get("key1");
+    Response<String> getResp4 = p.get("key2");
+
+    p.sync();
+
+    assertEquals(getResp1.get(), "foo1");
+    assertEquals(getResp2.get(), "foo2");
+    assertNull(getResp3.get());
+    assertNull(getResp4.get());
+  }
+
+  @Test
+  public void pipelineCopy() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key1", "foo");
+    Response<String> getResp1 = p.get("key1");
+    p.copy("key1", "key2", false);
+    Response<String> getResp2 = p.get("key2");
+
+    p.sync();
+
+    assertEquals(getResp1.get(), "foo");
+    assertEquals(getResp2.get(), "foo");
+  }
+
+  @Test
+  public void pipelineCopyWithoutReplace() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key1", "foo");
+    p.set("key2", "bar");
+    Response<String> getResp1 = p.get("key1");
+    Response<String> getResp2 = p.get("key2");
+    p.copy("key1", "key2", false);
+    Response<String> getResp3 = p.get("key1");
+    Response<String> getResp4 = p.get("key2");
+
+    p.sync();
+
+    assertEquals(getResp1.get(), "foo");
+    assertEquals(getResp2.get(), "bar");
+    assertEquals(getResp3.get(), "foo");
+    assertEquals(getResp4.get(), "bar");
+  }
+
+  @Test
+  public void pipelineCopyWithReplace() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key1", "foo");
+    p.set("key2", "bar");
+    Response<String> getResp1 = p.get("key1");
+    Response<String> getResp2 = p.get("key2");
+    p.copy("key1", "key2", true);
+    Response<String> getResp3 = p.get("key1");
+    Response<String> getResp4 = p.get("key2");
+
+    p.sync();
+
+    assertEquals(getResp1.get(), "foo");
+    assertEquals(getResp2.get(), "bar");
+    assertEquals(getResp3.get(), "foo");
+    assertEquals(getResp4.get(), "foo");
+  }
+
+  @Test
   public void pipelineResponseWithData() {
     jedis.zadd("zset", 1, "foo");
 
