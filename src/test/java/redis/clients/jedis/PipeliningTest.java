@@ -110,7 +110,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
 
     p.sync();
 
-    assertEquals(getResp1.get(), "foo");
+    assertEquals("foo", getResp1.get());
     assertNull(getResp2.get());
   }
 
@@ -128,10 +128,27 @@ public class PipeliningTest extends JedisCommandsTestBase {
 
     p.sync();
 
-    assertEquals(getResp1.get(), "foo1");
-    assertEquals(getResp2.get(), "foo2");
+    assertEquals("foo1", getResp1.get());
+    assertEquals("foo2", getResp2.get());
     assertNull(getResp3.get());
     assertNull(getResp4.get());
+  }
+
+  @Test
+  public void pipelineDumpAndRestore() {
+    Pipeline p1 = jedis.pipelined();
+
+    p1.set("key", "foo");
+    Response<byte[]> dumpData = p1.dump("key");
+    p1.sync();
+
+
+    Pipeline p2 = jedis.pipelined();
+    p2.restore("dump", 0, dumpData.get());
+    Response<String> getResp = p2.get("dump");
+    p2.sync();
+
+    assertEquals("foo", getResp.get());
   }
 
   @Test
