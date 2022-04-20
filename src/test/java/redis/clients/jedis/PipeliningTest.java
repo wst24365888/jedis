@@ -142,13 +142,23 @@ public class PipeliningTest extends JedisCommandsTestBase {
     Response<byte[]> dumpData = p1.dump("key");
     p1.sync();
 
-
     Pipeline p2 = jedis.pipelined();
     p2.restore("dump", 0, dumpData.get());
     Response<String> getResp = p2.get("dump");
     p2.sync();
 
     assertEquals("foo", getResp.get());
+  }
+
+  @Test
+  public void pipelineRename() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("oldkey", "foo");
+    p.rename("oldkey", "newkey");
+    p.sync();
+
+    assertEquals("foo", jedis.get("newkey"));
   }
 
   @Test
