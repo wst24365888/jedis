@@ -11,12 +11,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
@@ -159,6 +155,21 @@ public class PipeliningTest extends JedisCommandsTestBase {
     p.sync();
 
     assertEquals("foo", jedis.get("newkey"));
+  }
+
+  @Test
+  public void testSort(){
+    List<Integer> numbers = new ArrayList<>();
+    Pipeline p = jedis.pipelined();
+    for(int i=0;i<100;i++){
+      int number = (int)(Math.random()*100);
+      numbers.add(number);
+      p.lpush("sort", String.valueOf(number));
+    }
+    Response<List<String>> list = p.sort("sort");
+    p.sync();
+
+    assertEquals(numbers.stream().sorted().collect(Collectors.toList()).toString(), list.get().toString());
   }
 
   @Test
