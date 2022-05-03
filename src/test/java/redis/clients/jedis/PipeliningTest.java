@@ -11,12 +11,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
@@ -187,6 +183,83 @@ public class PipeliningTest extends JedisCommandsTestBase {
     p.sync();
 
     assertNotNull(score.get());
+  }
+
+  @Test
+  public void pipelineDelKey() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key", "foo");
+    Response<String> getResp1 = p.get("key");
+    p.del("key");
+    Response<String> getResp2 = p.get("key");
+
+    p.sync();
+
+    assertEquals("foo", getResp1.get());
+    assertNull(getResp2.get());
+  }
+
+  @Test
+  public void pipelineDelMultipleKey() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("key1", "foo1");
+    p.set("key2", "foo2");
+    Response<String> getResp1 = p.get("key1");
+    Response<String> getResp2 = p.get("key2");
+    p.del("key1", "key2");
+    Response<String> getResp3 = p.get("key1");
+    Response<String> getResp4 = p.get("key2");
+
+    p.sync();
+
+    assertEquals("foo1", getResp1.get());
+    assertEquals("foo2", getResp2.get());
+    assertNull(getResp3.get());
+    assertNull(getResp4.get());
+  }
+
+  @Test
+  public void pipelineDumpAndRestore() {
+    Pipeline p1 = jedis.pipelined();
+
+    p1.set("key", "foo");
+    Response<byte[]> dumpData = p1.dump("key");
+    p1.sync();
+
+    Pipeline p2 = jedis.pipelined();
+    p2.restore("dump", 0, dumpData.get());
+    Response<String> getResp = p2.get("dump");
+    p2.sync();
+
+    assertEquals("foo", getResp.get());
+  }
+
+  @Test
+  public void pipelineRename() {
+    Pipeline p = jedis.pipelined();
+
+    p.set("oldkey", "foo");
+    p.rename("oldkey", "newkey");
+    p.sync();
+
+    assertEquals("foo", jedis.get("newkey"));
+  }
+
+  @Test
+  public void testSort(){
+    List<Integer> numbers = new ArrayList<>();
+    Pipeline p = jedis.pipelined();
+    for(int i=0;i<100;i++){
+      int number = (int)(Math.random()*100);
+      numbers.add(number);
+      p.lpush("sort", String.valueOf(number));
+    }
+    Response<List<String>> list = p.sort("sort");
+    p.sync();
+
+    assertEquals(numbers.stream().sorted().collect(Collectors.toList()).toString(), list.get().toString());
   }
 
   @Test
